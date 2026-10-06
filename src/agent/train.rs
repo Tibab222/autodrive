@@ -82,6 +82,10 @@ impl Trainer {
         }
     }
 
+    pub fn set_epsilon(&mut self, epsilon: f32) {
+        self.epsilon = epsilon;
+    }
+
     /// Selects an action based on the current state using an epsilon-greedy policy.
     pub fn select_action(&mut self, state: &[f32]) -> usize {
         let mut rng = rand::rng();

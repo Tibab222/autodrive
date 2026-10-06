@@ -64,21 +64,21 @@ impl Agent {
         }
     }
 
-    pub fn load_model(&mut self, path: &str, mode: AgentMode) -> Self {
-        let model = model::NeuralNetwork::load_from_file(path).expect("Failed to load model from file");
+    pub fn load_model(path: &str, mode: AgentMode) -> std::io::Result<Self> {
+        let model = model::NeuralNetwork::load_from_file(path)?;
         if mode == AgentMode::Training {
             let trainer = Trainer::new(10000, model.clone());
-            Agent { mode, trainer: Some(trainer), model: None, epoch: 0, last_loss: 0.0, loss_history: Vec::new(), episode_reward: 0.0, episode_steps: 0, episode_distance_sum: 0.0, total_episodes: 0, successful_episodes: 0, crashed_episodes: 0, best_success_rate: 0.0, average_episode_reward: 0.0, average_episode_steps: 0.0, average_distance: 0.0, last_max_q: 0.0 }
+            Ok(Agent { mode, trainer: Some(trainer), model: Some(model), epoch: 0, last_loss: 0.0, loss_history: Vec::new(), episode_reward: 0.0, episode_steps: 0, episode_distance_sum: 0.0, total_episodes: 0, successful_episodes: 0, crashed_episodes: 0, best_success_rate: 0.0, average_episode_reward: 0.0, average_episode_steps: 0.0, average_distance: 0.0, last_max_q: 0.0 })
         } else {
-            Agent { mode, trainer: None, model: Some(model), epoch: 0, last_loss: 0.0, loss_history: Vec::new(), episode_reward: 0.0, episode_steps: 0, episode_distance_sum: 0.0, total_episodes: 0, successful_episodes: 0, crashed_episodes: 0, best_success_rate: 0.0, average_episode_reward: 0.0, average_episode_steps: 0.0, average_distance: 0.0, last_max_q: 0.0 }
+            Ok(Agent { mode, trainer: None, model: Some(model), epoch: 0, last_loss: 0.0, loss_history: Vec::new(), episode_reward: 0.0, episode_steps: 0, episode_distance_sum: 0.0, total_episodes: 0, successful_episodes: 0, crashed_episodes: 0, best_success_rate: 0.0, average_episode_reward: 0.0, average_episode_steps: 0.0, average_distance: 0.0, last_max_q: 0.0 })
         }
     }
 
     pub fn save_model(&self, path: &str) {
-        if let Some(model) = &self.model {
-            model.save_to_file(path).expect("Failed to save model to file");
-        } else if let Some(trainer) = &self.trainer {
+        if let Some(trainer) = &self.trainer {
             trainer.network.save_to_file(path).expect("Failed to save model to file");
+        } else if let Some(model) = &self.model {
+            model.save_to_file(path).expect("Failed to save model to file");
         } else {
             panic!("No model available to save");
         }
