@@ -3,6 +3,14 @@ use rand::RngExt;
 use crate::components::Wall;
 
 pub fn spawn_map(
+    commands: Commands,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<ColorMaterial>>,
+) {
+    spawn_random_map(commands, meshes, materials);
+}
+
+pub fn spawn_random_map(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,

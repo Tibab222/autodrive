@@ -32,6 +32,8 @@ pub struct NeuralNetwork {
 }
 
 impl NeuralNetwork {
+    const GRADIENT_CLIP: f32 = 1.0;
+
     pub fn new_random() -> Self {
         let mut rng = rand::rng();
 
@@ -179,8 +181,13 @@ impl NeuralNetwork {
         let mut d3 = vec![0.0f32; OUTPUT_SIZE];
         for i in 0..OUTPUT_SIZE {
             let err = cache.q_values[i] - target_q[i];
-            loss += err * err;
-            d3[i] = err;
+            let abs_err = err.abs();
+            loss += if abs_err <= 1.0 {
+                0.5 * err * err
+            } else {
+                abs_err - 0.5
+            };
+            d3[i] = err.clamp(-Self::GRADIENT_CLIP, Self::GRADIENT_CLIP);
         }
         // W3 = W3 - learning_rate * d3 * a2^T
         for i in 0..OUTPUT_SIZE {
@@ -199,7 +206,8 @@ impl NeuralNetwork {
             for j in 0..OUTPUT_SIZE {
                 sum += self.w3[j * HIDDEN_LAYER2_SIZE + i] * d3[j];
             }
-            d2[i] = sum * Self::relu_derivative(cache.z2[i]);
+            d2[i] = (sum * Self::relu_derivative(cache.z2[i]))
+                .clamp(-Self::GRADIENT_CLIP, Self::GRADIENT_CLIP);
         }
         // W2 = W2 - learning_rate * d2 * a1^T
         for i in 0..HIDDEN_LAYER2_SIZE {
@@ -218,7 +226,8 @@ impl NeuralNetwork {
             for j in 0..HIDDEN_LAYER2_SIZE {
                 sum += self.w2[j * HIDDEN_LAYER1_SIZE + i] * d2[j];
             }
-            d1[i] = sum * Self::relu_derivative(cache.z1[i]);
+            d1[i] = (sum * Self::relu_derivative(cache.z1[i]))
+                .clamp(-Self::GRADIENT_CLIP, Self::GRADIENT_CLIP);
         }
         // W1 = W1 - learning_rate * d1 * x^T
         for i in 0..HIDDEN_LAYER1_SIZE {
@@ -229,8 +238,7 @@ impl NeuralNetwork {
             self.b1[i] -= learning_rate * d1[i];
         }
 
-        loss *= 0.5; // Mean Squared Error
-        loss
+        loss / OUTPUT_SIZE as f32
     }
 
     // **********************************************************************************

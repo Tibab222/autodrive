@@ -54,3 +54,14 @@ impl Default for Sensor {
 
 #[derive(Component)]
 pub struct HudText;
+
+#[derive(Component)]
+pub struct LossHudText;
+
+#[derive(Component)]
+pub struct GoalMarker;
+
+#[derive(Resource)]
+pub struct ParkingGoal {
+    pub position: Vec2,
+}

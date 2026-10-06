@@ -1,13 +1,17 @@
-use bevy::prelude::*;
-use crate::components::{Car, Sensor, Wall, HudText};
+use bevy::{prelude::*, window::PrimaryWindow};
+use crate::{agent::{Agent, AgentMode}, components::{Car, Sensor, Wall, HudText, LossHudText}};
 
 pub fn update_sensors_and_hud(
     mut car_query: Query<(&Transform, &mut Sensor), With<Car>>,
-    wall_query: Query<(&Transform, &Wall)>,
+    wall_query: Query<(&Transform, &Wall), Without<HudText>>,
     mut gizmos: Gizmos,
-    mut text_query: Query<&mut Text, With<HudText>>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+    mut text_query: Query<(&mut Text2d, &mut Transform), (With<HudText>, Without<Car>)>,
 ) {
     let Ok((car_transform, mut sensor)) = car_query.single_mut() else { return; };
+    let Ok(window) = window_query.single() else { return; };
+    let half_size = Vec2::new(window.width(), window.height()) / 2.0;
+    let margin = 24.0;
 
     let car_pos = car_transform.translation.truncate();
     let car_rotation = car_transform.rotation.to_euler(EulerRot::ZYX).0 + std::f32::consts::FRAC_PI_2;
@@ -41,17 +45,18 @@ pub fn update_sensors_and_hud(
         gizmos.line_2d(car_pos, hit_point, color);
 
         let label = match i {
-            0 => "Gau",
-            1 => "D-G",
-            2 => "Avt",
-            3 => "D-D",
-            4 => "Dro",
-            _ => "Ray",
+            0 => "Left",
+            1 => "Front-left",
+            2 => "Front",
+            3 => "Front-right",
+            4 => "Right",
+            5 => "Rear",
+            _ => "Sensor",
         };
         hud_string.push_str(&format!("{}: {:.0} px\n", label, min_dist));
     }
 
-    let hud_center = Vec2::new(-560.0, 280.0);
+    let hud_center = Vec2::new(-half_size.x + margin + 100.0, half_size.y - margin - 90.0);
     
     gizmos.rect_2d(hud_center, Vec2::new(20.0, 35.0), Color::srgb(0.3, 0.7, 1.0));
     gizmos.line_2d(hud_center, hud_center + Vec2::new(0.0, 18.0), Color::srgb(1.0, 0.9, 0.0));
@@ -67,8 +72,87 @@ pub fn update_sensors_and_hud(
         gizmos.line_2d(hud_center, hud_center + hud_dir * normalized_dist, color);
     }
 
-    if let Ok(mut text) = text_query.single_mut() {
+    if let Ok((mut text, mut transform)) = text_query.single_mut() {
         text.0 = hud_string;
+        transform.translation = Vec3::new(
+            -half_size.x + margin + 95.0,
+            half_size.y - margin - 20.0,
+            10.0,
+        );
+    }
+
+}
+
+pub fn update_training_hud(
+    agent: Res<Agent>,
+    mut gizmos: Gizmos,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+    mut loss_text_query: Query<(&mut Text2d, &mut Transform), With<LossHudText>>,
+) {
+    if agent.mode != AgentMode::Training {
+        return;
+    }
+    let Ok(window) = window_query.single() else { return; };
+    let half_size = Vec2::new(window.width(), window.height()) / 2.0;
+    let margin = 24.0;
+
+    if let Ok((mut text, mut transform)) = loss_text_query.single_mut() {
+        let epsilon = agent.trainer.as_ref().map_or(0.0, |trainer| trainer.epsilon);
+        text.0 = format!(
+            "TRAINING\nEpisode: {}\nEpsilon: {:.4}\nLoss: {:.5}\n\
+             Episode reward: {:.2}\nAverage reward: {:.2}\n\
+             Steps: {}\nAverage steps: {:.1}\n\
+             Success rate: {:.1}%\nCrashes: {}\n\
+             Average distance: {:.1}\nMax Q: {:.2}",
+            agent.epoch,
+            epsilon,
+            agent.last_loss,
+            agent.episode_reward,
+            agent.average_episode_reward,
+            agent.episode_steps,
+            agent.average_episode_steps,
+            if agent.total_episodes > 0 {
+                agent.successful_episodes as f32 / agent.total_episodes as f32 * 100.0
+            } else {
+                0.0
+            },
+            agent.crashed_episodes,
+            agent.average_distance,
+            agent.last_max_q,
+        );
+        transform.translation = Vec3::new(
+            -half_size.x + margin + 115.0,
+            -half_size.y + margin + 140.0,
+            10.0,
+        );
+    }
+
+    draw_loss_graph(
+        &mut gizmos,
+        &agent.loss_history,
+        Vec2::new(-half_size.x + margin, -half_size.y + margin),
+        Vec2::new(
+            (half_size.x * 0.65).min(360.0),
+            (half_size.y * 0.35).min(120.0),
+        ),
+    );
+}
+
+fn draw_loss_graph(gizmos: &mut Gizmos, losses: &[f32], origin: Vec2, size: Vec2) {
+    let color = Color::srgb(1.0, 0.35, 0.2);
+
+    gizmos.rect_2d(origin + size / 2.0, size, Color::srgb(0.35, 0.35, 0.4));
+    if losses.len() < 2 {
+        return;
+    }
+
+    let max_loss = losses.iter().copied().fold(0.0001_f32, f32::max);
+    let step_x = size.x / (losses.len() - 1) as f32;
+    for index in 1..losses.len() {
+        let previous = origin
+            + Vec2::new((index - 1) as f32 * step_x, losses[index - 1] / max_loss * size.y);
+        let current = origin + Vec2::new(index as f32 * step_x, losses[index] / max_loss * size.y);
+        gizmos.line_2d(previous, current, color);
     }
 }
 

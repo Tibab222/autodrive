@@ -8,7 +8,8 @@ const EPSILON_DECAY: f32 = 0.995; // Decay rate for epsilon
 const MIN_EPSILON: f32 = 0.05; // Minimum value for epsilon
 const BATCH_SIZE: usize = 64;
 const GAMMA: f32 = 0.99; // Discount factor for future rewards
-const LEARNING_RATE: f32 = 0.003; // Learning rate for the optimizer
+const LEARNING_RATE: f32 = 0.0005; // Learning rate for the optimizer
+const MAX_TARGET_Q: f32 = 100.0;
 const TARGET_UPDATE_INTERVAL: usize = 100; // Update target network every 1000 training steps
 
 #[derive(Clone)]
@@ -82,7 +83,7 @@ impl Trainer {
     }
 
     /// Selects an action based on the current state using an epsilon-greedy policy.
-    fn select_action(&mut self, state: &[f32]) -> usize {
+    pub fn select_action(&mut self, state: &[f32]) -> usize {
         let mut rng = rand::rng();
 
         // Epsilon-greedy action selection
@@ -104,7 +105,7 @@ impl Trainer {
         best_action
     }
 
-    fn train_step(&mut self) -> f32 {
+    pub fn train_step(&mut self) -> f32 {
         if self.replay_buffer.len() < BATCH_SIZE {
             return 0.0
         }
@@ -119,7 +120,7 @@ impl Trainer {
             } else {
                 let next_q_values = self.target_network.forward(&transition.next_state);
                 let max_next_q = next_q_values.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
-                transition.reward + GAMMA * max_next_q
+                (transition.reward + GAMMA * max_next_q).clamp(-MAX_TARGET_Q, MAX_TARGET_Q)
             };
 
             let mut target_q = cache.q_values.clone();
@@ -132,5 +133,10 @@ impl Trainer {
             self.target_network = self.network.clone();
         }
         total_loss / BATCH_SIZE as f32
+    }
+
+    pub fn decay_epsilon(&mut self) {
+        self.epsilon = (self.epsilon * self.epsilon_decay).max(self.min_epsilon);
+        print!("Decaying epsilon: {:.4}\n", self.epsilon);
     }
 }
