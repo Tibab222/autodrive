@@ -189,14 +189,6 @@ impl NeuralNetwork {
             };
             d3[i] = err.clamp(-Self::GRADIENT_CLIP, Self::GRADIENT_CLIP);
         }
-        // W3 = W3 - learning_rate * d3 * a2^T
-        for i in 0..OUTPUT_SIZE {
-            let row_offset = i * HIDDEN_LAYER2_SIZE;
-            for j in 0..HIDDEN_LAYER2_SIZE {
-                self.w3[row_offset + j] -= learning_rate * d3[i] * cache.a2[j];
-            }
-            self.b3[i] -= learning_rate * d3[i];
-        }
 
         // Hidden layer 2 gradients
         // d2 = (W3^T * d3) * ReLU'(z2)
@@ -208,14 +200,6 @@ impl NeuralNetwork {
             }
             d2[i] = (sum * Self::relu_derivative(cache.z2[i]))
                 .clamp(-Self::GRADIENT_CLIP, Self::GRADIENT_CLIP);
-        }
-        // W2 = W2 - learning_rate * d2 * a1^T
-        for i in 0..HIDDEN_LAYER2_SIZE {
-            let row_offset = i * HIDDEN_LAYER1_SIZE;
-            for j in 0..HIDDEN_LAYER1_SIZE {
-                self.w2[row_offset + j] -= learning_rate * d2[i] * cache.a1[j];
-            }
-            self.b2[i] -= learning_rate * d2[i];
         }
 
         // Hidden layer 1 gradients
@@ -229,6 +213,25 @@ impl NeuralNetwork {
             d1[i] = (sum * Self::relu_derivative(cache.z1[i]))
                 .clamp(-Self::GRADIENT_CLIP, Self::GRADIENT_CLIP);
         }
+
+        // W3 = W3 - learning_rate * d3 * a2^T
+        for i in 0..OUTPUT_SIZE {
+            let row_offset = i * HIDDEN_LAYER2_SIZE;
+            for j in 0..HIDDEN_LAYER2_SIZE {
+                self.w3[row_offset + j] -= learning_rate * d3[i] * cache.a2[j];
+            }
+            self.b3[i] -= learning_rate * d3[i];
+        }
+
+        // W2 = W2 - learning_rate * d2 * a1^T
+        for i in 0..HIDDEN_LAYER2_SIZE {
+            let row_offset = i * HIDDEN_LAYER1_SIZE;
+            for j in 0..HIDDEN_LAYER1_SIZE {
+                self.w2[row_offset + j] -= learning_rate * d2[i] * cache.a1[j];
+            }
+            self.b2[i] -= learning_rate * d2[i];
+        }
+
         // W1 = W1 - learning_rate * d1 * x^T
         for i in 0..HIDDEN_LAYER1_SIZE {
             let row_offset = i * INPUT_SIZE;
