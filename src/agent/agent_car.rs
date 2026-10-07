@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
-const CRASH_PENALTY: f32 = -1.0;
-const PARKING_REWARD: f32 = 1.0;
+const CRASH_PENALTY: f32 = -5.0;
+const PARKING_REWARD: f32 = 5.0;
 const PARKING_RADIUS: f32 = 25.0;
 const PARKING_SPEED_THRESHOLD: f32 = 10.0;
-const STEP_PENALTY: f32 = 0.001;
+const STEP_PENALTY: f32 = 0.005;
 const DISTANCE_REWARD_SCALE: f32 = 1.0;
 
 #[derive(Component)]

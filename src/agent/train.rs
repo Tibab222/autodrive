@@ -10,7 +10,7 @@ const BATCH_SIZE: usize = 128;
 const GAMMA: f32 = 0.99; // Discount factor for future rewards
 const LEARNING_RATE: f32 = 0.0005; // Learning rate for the optimizer
 const MAX_TARGET_Q: f32 = 100.0;
-const TARGET_UPDATE_INTERVAL: usize = 100; // Update target network every 1000 training steps
+const TARGET_UPDATE_INTERVAL: usize = 500; // Update target network every 500 training steps
 
 #[derive(Clone)]
 pub struct Transition {
