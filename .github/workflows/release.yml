@@ -1,0 +1,49 @@
+name: Release Windows Executable
+
+on:
+  push:
+    tags:
+      - 'v-*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build & Release Windows .exe
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build project (Release)
+        run: cargo build --release
+
+      - name: Prepare release artifact
+        shell: bash
+        run: |
+          mkdir -p release_dist
+          cp target/release/autodrive.exe release_dist/
+          # cp -r assets release_dist/assets
+          cd release_dist
+          7z a ../autodrive-windows.zip *
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            autodrive-windows.zip
+            target/release/autodrive.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
