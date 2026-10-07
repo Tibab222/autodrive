@@ -67,13 +67,14 @@ The agent controls the car automatically. The keyboard controls in `controls.rs`
 ## Architecture at a glance
 
 - **Model architecture** — See [Model Architecture](docs/MODEL_ARCHITECTURE.md) for the MLP topology, state encoding, action-value outputs, and model serialization format.
+- **Training architecture** — See [DQN Training Architecture](docs/training.md) for experience replay, Bellman targets, target-network synchronization, exploration, and optimization details.
 - **Environment** — Bevy entities represent the car, walls, sensors, and parking goal. Each episode uses a randomized map and goal.
 - **Observation** — Six normalized lidar distances, normalized speed, normalized distance to the goal, and normalized relative angle form a 9-value state vector.
 - **Policy** — The MLP maps the state to five Q-values corresponding to discrete car actions.
 - **Training** — The DQN trainer uses epsilon-greedy exploration, a replay buffer, Bellman targets, Huber loss, gradient clipping, and periodic target-network updates.
 - **Inference** — A saved model selects the action with the highest Q-value without exploration.
 
-Detailed implementation notes can live in separate documentation files as the project evolves. Useful topics include the neural-network implementation, DQN update equations, reward design, and experiment results.
+Reward calculation and reward-shaping experiments will be documented separately from the DQN training method.
 
 ## Results
 

@@ -28,23 +28,23 @@ impl AgentCar {
         }
     }
 
-    /// Constructs the state vector for the agent based on the car's position, target position, and raycast distances.
-    pub fn build_state(
-        &self,
-        car_transform: &Transform,
-        target_transform: &Transform,
-        raycasts: &[f32],
-    ) -> Vec<f32> {
-        let rel_x = target_transform.translation.x - car_transform.translation.x;
-        let rel_y = target_transform.translation.y - car_transform.translation.y;
-        let current_dist = car_transform
-            .translation
-            .distance(target_transform.translation);
+    // /// Constructs the state vector for the agent based on the car's position, target position, and raycast distances.
+    // pub fn build_state(
+    //     &self,
+    //     car_transform: &Transform,
+    //     target_transform: &Transform,
+    //     raycasts: &[f32],
+    // ) -> Vec<f32> {
+    //     let rel_x = target_transform.translation.x - car_transform.translation.x;
+    //     let rel_y = target_transform.translation.y - car_transform.translation.y;
+    //     let current_dist = car_transform
+    //         .translation
+    //         .distance(target_transform.translation);
 
-        let mut state = vec![rel_x, rel_y, car_transform.rotation.z, current_dist];
-        state.extend_from_slice(raycasts); // Ajout des distances LiDAR/Raycast
-        state
-    }
+    //     let mut state = vec![rel_x, rel_y, car_transform.rotation.z, current_dist];
+    //     state.extend_from_slice(raycasts); // Ajout des distances LiDAR/Raycast
+    //     state
+    // }
 
     /// Computes the reward based on the current distance to the target and the agent's state (crashed or parked).
     pub fn compute_reward(&mut self, current_dist: f32) -> (f32, bool) {
