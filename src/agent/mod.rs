@@ -6,6 +6,7 @@ pub mod agent_car;
 use crate::agent::{model::NeuralNetwork, train::Trainer};
 
 use bevy::ecs::resource::Resource;
+use std::collections::VecDeque;
 pub use state::{CarAction, encode_state};
 pub use train::{ReplayBuffer, Transition};
 
@@ -30,6 +31,7 @@ pub struct Agent {
     pub successful_episodes: usize,
     pub crashed_episodes: usize,
     pub best_success_rate: f32,
+    pub recent_episode_results: VecDeque<bool>,
     pub average_episode_reward: f32,
     pub average_episode_steps: f32,
     pub average_distance: f32,
@@ -49,6 +51,7 @@ impl Agent {
                     loss_history: Vec::new(), episode_reward: 0.0, episode_steps: 0,
                     episode_distance_sum: 0.0, total_episodes: 0, successful_episodes: 0,
                     crashed_episodes: 0, best_success_rate: 0.0, average_episode_reward: 0.0, average_episode_steps: 0.0,
+                    recent_episode_results: VecDeque::new(),
                     average_distance: 0.0, last_max_q: 0.0,
                 }
             },
@@ -58,6 +61,7 @@ impl Agent {
                     loss_history: Vec::new(), episode_reward: 0.0, episode_steps: 0,
                     episode_distance_sum: 0.0, total_episodes: 0, successful_episodes: 0,
                     crashed_episodes: 0, best_success_rate: 0.0, average_episode_reward: 0.0, average_episode_steps: 0.0,
+                    recent_episode_results: VecDeque::new(),
                     average_distance: 0.0, last_max_q: 0.0,
                 }
             },
@@ -67,10 +71,10 @@ impl Agent {
     pub fn load_model(path: &str, mode: AgentMode) -> std::io::Result<Self> {
         let model = model::NeuralNetwork::load_from_file(path)?;
         if mode == AgentMode::Training {
-            let trainer = Trainer::new(10000, model.clone());
-            Ok(Agent { mode, trainer: Some(trainer), model: Some(model), epoch: 0, last_loss: 0.0, loss_history: Vec::new(), episode_reward: 0.0, episode_steps: 0, episode_distance_sum: 0.0, total_episodes: 0, successful_episodes: 0, crashed_episodes: 0, best_success_rate: 0.0, average_episode_reward: 0.0, average_episode_steps: 0.0, average_distance: 0.0, last_max_q: 0.0 })
+            let trainer = Trainer::new(50_000, model.clone());
+            Ok(Agent { mode, trainer: Some(trainer), model: Some(model), epoch: 0, last_loss: 0.0, loss_history: Vec::new(), episode_reward: 0.0, episode_steps: 0, episode_distance_sum: 0.0, total_episodes: 0, successful_episodes: 0, crashed_episodes: 0, best_success_rate: 0.0, recent_episode_results: VecDeque::new(), average_episode_reward: 0.0, average_episode_steps: 0.0, average_distance: 0.0, last_max_q: 0.0 })
         } else {
-            Ok(Agent { mode, trainer: None, model: Some(model), epoch: 0, last_loss: 0.0, loss_history: Vec::new(), episode_reward: 0.0, episode_steps: 0, episode_distance_sum: 0.0, total_episodes: 0, successful_episodes: 0, crashed_episodes: 0, best_success_rate: 0.0, average_episode_reward: 0.0, average_episode_steps: 0.0, average_distance: 0.0, last_max_q: 0.0 })
+            Ok(Agent { mode, trainer: None, model: Some(model), epoch: 0, last_loss: 0.0, loss_history: Vec::new(), episode_reward: 0.0, episode_steps: 0, episode_distance_sum: 0.0, total_episodes: 0, successful_episodes: 0, crashed_episodes: 0, best_success_rate: 0.0, recent_episode_results: VecDeque::new(), average_episode_steps: 0.0, average_distance: 0.0, average_episode_reward: 0.0, last_max_q: 0.0 })
         }
     }
 

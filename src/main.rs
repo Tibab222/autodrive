@@ -7,7 +7,7 @@ mod system;
 
 use bevy::{prelude::*, window::WindowResolution};
 use components::{Car, GoalMarker, HudText, LossHudText, Sensor};
-use map::spawn_map;
+use map::{MapLayout, random_valid_goal, spawn_map};
 use sensors::{update_sensors_and_hud, update_training_hud};
 
 use crate::{agent::{Agent, AgentMode, agent_car::AgentCar}, components::ParkingGoal, system::agent_loop_system};
@@ -44,6 +44,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         trainer.set_epsilon(epsilon);
     }
 
+    let layout = MapLayout::random();
+    let goal = ParkingGoal {
+        position: random_valid_goal(&layout.walls),
+    };
+
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -57,7 +62,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .insert_resource(ClearColor(Color::srgb(0.1, 0.1, 0.12)))
         // Agent & Goal
         .insert_resource(agent)
-        .insert_resource(ParkingGoal { position: Vec2::new(300.0, 200.0) })
+        .insert_resource(layout)
+        .insert_resource(goal)
         .add_systems(Startup, (setup, spawn_map))
         .add_systems(Update, (agent_loop_system, (update_sensors_and_hud, update_training_hud)).chain())
         .run();

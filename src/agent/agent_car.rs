@@ -1,4 +1,3 @@
-// agent/agent_car.rs
 use bevy::prelude::*;
 
 const CRASH_PENALTY: f32 = -1.0;

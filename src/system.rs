@@ -1,7 +1,8 @@
 use bevy::prelude::*;
-use rand::RngExt;
 
-use crate::{agent::{Agent, AgentMode, CarAction, Transition, agent_car::AgentCar, encode_state}, components::{Car, GoalMarker, ParkingGoal, Sensor, Wall}, controls::step_car_physics, map::spawn_random_map};
+use crate::{agent::{Agent, AgentMode, CarAction, Transition, agent_car::AgentCar, encode_state}, components::{Car, GoalMarker, ParkingGoal, Sensor, Wall}, controls::step_car_physics, map::{MapLayout, random_valid_goal, spawn_random_map}};
+
+const SUCCESS_RATE_WINDOW: usize = 50;
 
 pub fn agent_loop_system(
     mut agent: ResMut<Agent>,
@@ -12,6 +13,7 @@ pub fn agent_loop_system(
     wall_query: Query<(&Transform, &Wall), (Without<Car>, Without<GoalMarker>)>,
     wall_entities: Query<Entity, With<Wall>>,
     mut goal_marker_query: Query<&mut Transform, (With<GoalMarker>, Without<Car>)>,
+    mut layout: ResMut<MapLayout>,
     meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<ColorMaterial>>,
 ) {
@@ -64,6 +66,10 @@ pub fn agent_loop_system(
                 } else {
                     agent.successful_episodes += 1;
                 }
+                agent.recent_episode_results.push_back(!agent_car.is_crashed);
+                if agent.recent_episode_results.len() > SUCCESS_RATE_WINDOW {
+                    agent.recent_episode_results.pop_front();
+                }
                 agent.average_episode_reward =
                     (agent.average_episode_reward * (agent.total_episodes - 1) as f32
                         + agent.episode_reward)
@@ -81,9 +87,16 @@ pub fn agent_loop_system(
                     (agent.average_distance * (agent.total_episodes - 1) as f32
                         + episode_average_distance)
                         / agent.total_episodes as f32;
+                let recent_successes = agent
+                    .recent_episode_results
+                    .iter()
+                    .filter(|&&successful| successful)
+                    .count();
                 let success_rate =
-                    agent.successful_episodes as f32 / agent.total_episodes as f32;
-                if agent.successful_episodes > 0 && success_rate > agent.best_success_rate {
+                    recent_successes as f32 / agent.recent_episode_results.len() as f32;
+                if agent.recent_episode_results.len() == SUCCESS_RATE_WINDOW
+                    && success_rate > agent.best_success_rate
+                {
                     agent.best_success_rate = success_rate;
                     std::fs::create_dir_all("checkpoints")
                         .expect("Failed to create checkpoints directory");
@@ -101,6 +114,7 @@ pub fn agent_loop_system(
                 randomize_episode(
                     &mut commands,
                     &mut goal,
+                    &mut layout,
                     &wall_entities,
                     &mut goal_marker_query,
                     meshes,
@@ -142,6 +156,7 @@ pub fn agent_loop_system(
 fn randomize_episode(
     commands: &mut Commands,
     goal: &mut ParkingGoal,
+    layout: &mut MapLayout,
     wall_entities: &Query<Entity, With<Wall>>,
     goal_marker_query: &mut Query<&mut Transform, (With<GoalMarker>, Without<Car>)>,
     meshes: ResMut<Assets<Mesh>>,
@@ -151,18 +166,15 @@ fn randomize_episode(
         commands.entity(entity).despawn();
     }
 
-    let mut rng = rand::rng();
-    goal.position = Vec2::new(
-        rng.random_range(-450.0..450.0),
-        rng.random_range(-250.0..250.0),
-    );
+    *layout = MapLayout::random();
+    goal.position = random_valid_goal(&layout.walls);
 
     for mut transform in goal_marker_query.iter_mut() {
         transform.translation.x = goal.position.x;
         transform.translation.y = goal.position.y;
     }
 
-    spawn_random_map(commands.reborrow(), meshes, materials);
+    spawn_random_map(commands.reborrow(), meshes, materials, layout);
 }
 
 fn apply_car_action(

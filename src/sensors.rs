@@ -111,10 +111,16 @@ pub fn update_training_hud(
             agent.average_episode_reward,
             agent.episode_steps,
             agent.average_episode_steps,
-            if agent.total_episodes > 0 {
-                agent.successful_episodes as f32 / agent.total_episodes as f32 * 100.0
-            } else {
+            if agent.recent_episode_results.is_empty() {
                 0.0
+            } else {
+                agent
+                    .recent_episode_results
+                    .iter()
+                    .filter(|&&successful| successful)
+                    .count() as f32
+                    / agent.recent_episode_results.len() as f32
+                    * 100.0
             },
             agent.crashed_episodes,
             agent.average_distance,

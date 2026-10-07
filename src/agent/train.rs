@@ -6,7 +6,7 @@ use crate::agent::model;
 
 const EPSILON_DECAY: f32 = 0.995; // Decay rate for epsilon
 const MIN_EPSILON: f32 = 0.05; // Minimum value for epsilon
-const BATCH_SIZE: usize = 64;
+const BATCH_SIZE: usize = 128;
 const GAMMA: f32 = 0.99; // Discount factor for future rewards
 const LEARNING_RATE: f32 = 0.0005; // Learning rate for the optimizer
 const MAX_TARGET_Q: f32 = 100.0;
