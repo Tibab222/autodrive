@@ -66,6 +66,7 @@ The agent controls the car automatically. The keyboard controls in `controls.rs`
 
 ## Architecture at a glance
 
+- **Model architecture** — See [Model Architecture](docs/MODEL_ARCHITECTURE.md) for the MLP topology, state encoding, action-value outputs, and model serialization format.
 - **Environment** — Bevy entities represent the car, walls, sensors, and parking goal. Each episode uses a randomized map and goal.
 - **Observation** — Six normalized lidar distances, normalized speed, normalized distance to the goal, and normalized relative angle form a 9-value state vector.
 - **Policy** — The MLP maps the state to five Q-values corresponding to discrete car actions.
