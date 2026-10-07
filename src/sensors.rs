@@ -1,5 +1,8 @@
+use crate::{
+    agent::{Agent, AgentMode},
+    components::{Car, HudText, LossHudText, Sensor, Wall},
+};
 use bevy::{prelude::*, window::PrimaryWindow};
-use crate::{agent::{Agent, AgentMode}, components::{Car, Sensor, Wall, HudText, LossHudText}};
 
 pub fn update_sensors_and_hud(
     mut car_query: Query<(&Transform, &mut Sensor), With<Car>>,
@@ -8,13 +11,18 @@ pub fn update_sensors_and_hud(
     window_query: Query<&Window, With<PrimaryWindow>>,
     mut text_query: Query<(&mut Text2d, &mut Transform), (With<HudText>, Without<Car>)>,
 ) {
-    let Ok((car_transform, mut sensor)) = car_query.single_mut() else { return; };
-    let Ok(window) = window_query.single() else { return; };
+    let Ok((car_transform, mut sensor)) = car_query.single_mut() else {
+        return;
+    };
+    let Ok(window) = window_query.single() else {
+        return;
+    };
     let half_size = Vec2::new(window.width(), window.height()) / 2.0;
     let margin = 24.0;
 
     let car_pos = car_transform.translation.truncate();
-    let car_rotation = car_transform.rotation.to_euler(EulerRot::ZYX).0 + std::f32::consts::FRAC_PI_2;
+    let car_rotation =
+        car_transform.rotation.to_euler(EulerRot::ZYX).0 + std::f32::consts::FRAC_PI_2;
 
     let ray_angles = sensor.ray_angles.clone();
     let num_rays = ray_angles.len();
@@ -57,9 +65,17 @@ pub fn update_sensors_and_hud(
     }
 
     let hud_center = Vec2::new(-half_size.x + margin + 100.0, half_size.y - margin - 90.0);
-    
-    gizmos.rect_2d(hud_center, Vec2::new(20.0, 35.0), Color::srgb(0.3, 0.7, 1.0));
-    gizmos.line_2d(hud_center, hud_center + Vec2::new(0.0, 18.0), Color::srgb(1.0, 0.9, 0.0));
+
+    gizmos.rect_2d(
+        hud_center,
+        Vec2::new(20.0, 35.0),
+        Color::srgb(0.3, 0.7, 1.0),
+    );
+    gizmos.line_2d(
+        hud_center,
+        hud_center + Vec2::new(0.0, 18.0),
+        Color::srgb(1.0, 0.9, 0.0),
+    );
 
     for (i, &angle_offset) in ray_angles.iter().enumerate() {
         let dist = sensor.distances[i];
@@ -80,52 +96,59 @@ pub fn update_sensors_and_hud(
             10.0,
         );
     }
-
 }
 
-pub fn update_training_hud(
+pub fn update_agent_hud(
     agent: Res<Agent>,
     mut gizmos: Gizmos,
     window_query: Query<&Window, With<PrimaryWindow>>,
     mut loss_text_query: Query<(&mut Text2d, &mut Transform), With<LossHudText>>,
 ) {
-    if agent.mode != AgentMode::Training {
+    let Ok(window) = window_query.single() else {
         return;
-    }
-    let Ok(window) = window_query.single() else { return; };
+    };
     let half_size = Vec2::new(window.width(), window.height()) / 2.0;
     let margin = 24.0;
 
     if let Ok((mut text, mut transform)) = loss_text_query.single_mut() {
-        let epsilon = agent.trainer.as_ref().map_or(0.0, |trainer| trainer.epsilon);
-        text.0 = format!(
-            "TRAINING\nEpisode: {}\nEpsilon: {:.4}\nLoss: {:.5}\n\
-             Episode reward: {:.2}\nAverage reward: {:.2}\n\
-             Steps: {}\nAverage steps: {:.1}\n\
-             Success rate: {:.1}%\nCrashes: {}\n\
-             Average distance: {:.1}\nMax Q: {:.2}",
-            agent.epoch,
-            epsilon,
-            agent.last_loss,
-            agent.episode_reward,
-            agent.average_episode_reward,
-            agent.episode_steps,
-            agent.average_episode_steps,
-            if agent.recent_episode_results.is_empty() {
-                0.0
-            } else {
-                agent
-                    .recent_episode_results
-                    .iter()
-                    .filter(|&&successful| successful)
-                    .count() as f32
-                    / agent.recent_episode_results.len() as f32
-                    * 100.0
-            },
-            agent.crashed_episodes,
-            agent.average_distance,
-            agent.last_max_q,
-        );
+        let success_rate = if agent.recent_episode_results.is_empty() {
+            0.0
+        } else {
+            agent
+                .recent_episode_results
+                .iter()
+                .filter(|&&successful| successful)
+                .count() as f32
+                / agent.recent_episode_results.len() as f32
+                * 100.0
+        };
+        text.0 = match agent.mode {
+            AgentMode::Training => {
+                let epsilon = agent.trainer.as_ref().map_or(0.0, |trainer| trainer.epsilon);
+                format!(
+                    "TRAINING\nEpisode: {}\nEpsilon: {:.4}\nLoss: {:.5}\n\
+                     Episode reward: {:.2}\nAverage reward: {:.2}\n\
+                     Steps: {}\nAverage steps: {:.1}\n\
+                     Success rate: {:.1}%\nCrashes: {}\n\
+                     Average distance: {:.1}\nMax Q: {:.2}",
+                    agent.epoch, epsilon, agent.last_loss, agent.episode_reward,
+                    agent.average_episode_reward, agent.episode_steps,
+                    agent.average_episode_steps, success_rate, agent.crashed_episodes,
+                    agent.average_distance, agent.last_max_q,
+                )
+            }
+            AgentMode::Inference => format!(
+                "INFERENCE\nEpisodes: {}\nSuccess rate: {:.1}%\n\
+                 Successful: {}\nCrashes: {}\nCurrent steps: {}\nAverage steps: {:.1}\nMax Q: {:.2}",
+                agent.total_episodes,
+                success_rate,
+                agent.successful_episodes,
+                agent.crashed_episodes,
+                agent.episode_steps,
+                agent.average_episode_steps,
+                agent.last_max_q,
+            ),
+        };
         transform.translation = Vec3::new(
             -half_size.x + margin + 115.0,
             -half_size.y + margin + 140.0,
@@ -156,7 +179,10 @@ fn draw_loss_graph(gizmos: &mut Gizmos, losses: &[f32], origin: Vec2, size: Vec2
     let step_x = size.x / (losses.len() - 1) as f32;
     for index in 1..losses.len() {
         let previous = origin
-            + Vec2::new((index - 1) as f32 * step_x, losses[index - 1] / max_loss * size.y);
+            + Vec2::new(
+                (index - 1) as f32 * step_x,
+                losses[index - 1] / max_loss * size.y,
+            );
         let current = origin + Vec2::new(index as f32 * step_x, losses[index] / max_loss * size.y);
         gizmos.line_2d(previous, current, color);
     }
@@ -180,17 +206,31 @@ fn ray_aabb_intersection(origin: Vec2, dir: Vec2, box_pos: Vec2, box_size: Vec2)
     let mut tmin = (min_b.x - origin.x) / dir.x;
     let mut tmax = (max_b.x - origin.x) / dir.x;
 
-    if tmin > tmax { std::mem::swap(&mut tmin, &mut tmax); }
+    if tmin > tmax {
+        std::mem::swap(&mut tmin, &mut tmax);
+    }
 
     let mut tymin = (min_b.y - origin.y) / dir.y;
     let mut tymax = (max_b.y - origin.y) / dir.y;
 
-    if tymin > tymax { std::mem::swap(&mut tymin, &mut tymax); }
+    if tymin > tymax {
+        std::mem::swap(&mut tymin, &mut tymax);
+    }
 
-    if (tmin > tymax) || (tymin > tmax) { return None; }
+    if (tmin > tymax) || (tymin > tmax) {
+        return None;
+    }
 
-    if tymin > tmin { tmin = tymin; }
-    if tymax < tmax { tmax = tymax; }
+    if tymin > tmin {
+        tmin = tymin;
+    }
+    if tymax < tmax {
+        tmax = tymax;
+    }
 
-    if tmin >= 0.0 { Some(tmin) } else { None }
+    if tmin >= 0.0 {
+        Some(tmin)
+    } else {
+        None
+    }
 }

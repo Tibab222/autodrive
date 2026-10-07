@@ -1,16 +1,20 @@
+mod agent;
 mod components;
 mod controls;
 mod map;
 mod sensors;
-mod agent;
 mod system;
 
 use bevy::{prelude::*, window::WindowResolution};
 use components::{Car, GoalMarker, HudText, LossHudText, Sensor};
-use map::{MapLayout, random_valid_goal, spawn_map};
-use sensors::{update_sensors_and_hud, update_training_hud};
+use map::{random_valid_goal, spawn_map, MapLayout};
+use sensors::{update_agent_hud, update_sensors_and_hud};
 
-use crate::{agent::{Agent, AgentMode, agent_car::AgentCar}, components::ParkingGoal, system::agent_loop_system};
+use crate::{
+    agent::{agent_car::AgentCar, Agent, AgentMode},
+    components::ParkingGoal,
+    system::agent_loop_system,
+};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (model_path, train, epsilon) = parse_args()?;
@@ -30,9 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let mut agent = match model_path {
-        Some(path) => {
-            Agent::load_model(&path, mode)?
-        }
+        Some(path) => Agent::load_model(&path, mode)?,
         None => Agent::new(mode),
     };
 
@@ -65,7 +67,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .insert_resource(layout)
         .insert_resource(goal)
         .add_systems(Startup, (setup, spawn_map))
-        .add_systems(Update, (agent_loop_system, (update_sensors_and_hud, update_training_hud)).chain())
+        .add_systems(
+            Update,
+            (
+                agent_loop_system,
+                (update_sensors_and_hud, update_agent_hud),
+            )
+                .chain(),
+        )
         .run();
 
     Ok(())
@@ -94,22 +103,26 @@ fn parse_args() -> Result<(Option<String>, bool, Option<f32>), String> {
         } else if arg == "--train" {
             train = true;
         } else if let Some(epsilon_str) = arg.strip_prefix("--epsilon=") {
-            let parsed_epsilon: f32 = epsilon_str
-                .parse()
-                .map_err(|_| "Invalid value for --epsilon. Must be a float between 0 and 1.".to_string())?;
+            let parsed_epsilon: f32 = epsilon_str.parse().map_err(|_| {
+                "Invalid value for --epsilon. Must be a float between 0 and 1.".to_string()
+            })?;
             if !(0.0..=1.0).contains(&parsed_epsilon) {
-                return Err("Invalid value for --epsilon. Must be a float between 0 and 1.".to_string());
+                return Err(
+                    "Invalid value for --epsilon. Must be a float between 0 and 1.".to_string(),
+                );
             }
             epsilon = Some(parsed_epsilon);
         } else if arg == "--epsilon" {
-            let epsilon_str = args
-                .next()
-                .ok_or_else(|| "The --epsilon option requires a value between 0 and 1".to_string())?;
-            let parsed_epsilon: f32 = epsilon_str
-                .parse()
-                .map_err(|_| "Invalid value for --epsilon. Must be a float between 0 and 1.".to_string())?;
+            let epsilon_str = args.next().ok_or_else(|| {
+                "The --epsilon option requires a value between 0 and 1".to_string()
+            })?;
+            let parsed_epsilon: f32 = epsilon_str.parse().map_err(|_| {
+                "Invalid value for --epsilon. Must be a float between 0 and 1.".to_string()
+            })?;
             if !(0.0..=1.0).contains(&parsed_epsilon) {
-                return Err("Invalid value for --epsilon. Must be a float between 0 and 1.".to_string());
+                return Err(
+                    "Invalid value for --epsilon. Must be a float between 0 and 1.".to_string(),
+                );
             }
             epsilon = Some(parsed_epsilon);
         } else {
@@ -141,18 +154,20 @@ fn setup(
         HudText,
     ));
 
-    if agent.mode == AgentMode::Training {
-        commands.spawn((
-            Text2d::new("TRAINING\nEpoch: 0\nEpsilon: 1.0000\nLoss: waiting..."),
-            TextFont {
-                font_size: FontSize::from(18.0),
-                ..default()
-            },
-            TextColor(Color::WHITE),
-            Transform::from_xyz(-480.0, -135.0, 10.0),
-            LossHudText,
-        ));
-    }
+    let mode_text = match agent.mode {
+        AgentMode::Training => "TRAINING\nEpisode: 0\nEpsilon: 1.0000\nLoss: waiting...",
+        AgentMode::Inference => "INFERENCE\nEpisodes: 0\nSuccess rate: 0.0%",
+    };
+    commands.spawn((
+        Text2d::new(mode_text),
+        TextFont {
+            font_size: FontSize::from(18.0),
+            ..default()
+        },
+        TextColor(Color::WHITE),
+        Transform::from_xyz(-480.0, -135.0, 10.0),
+        LossHudText,
+    ));
 
     // Car mesh and material
     let car_mesh = meshes.add(Rectangle::new(30.0, 50.0)); // Largeur: 30px, Hauteur: 50px
