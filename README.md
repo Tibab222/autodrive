@@ -78,7 +78,11 @@ Reward calculation and reward-shaping experiments will be documented separately 
 
 ## Results
 
-The project currently provides the simulation and live episode metrics, including episode count, success rate, crashes, and average steps. Add benchmark values here once they are measured with a fixed model, number of episodes, and map-generation conditions.
+The current V1 benchmark results were produced with the
+[model_V1.bin](checkpoints/model_V1.bin) checkpoint. The project provides
+simulation and live episode metrics, including episode count, success rate,
+crashes, and average steps. Future benchmarks should record the checkpoint,
+number of episodes, random seed, and map-generation conditions.
 
 The current reward baseline and its empirical observations are documented in
 [Reward Analysis V1](docs/algorithms/REWARD_ANALYSIS_V1.md). Future reward
@@ -95,3 +99,13 @@ The project uses custom car movement and collision code rather than a separate p
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE).
+
+## References
+
+- [Reinforcement Learning: An Introduction (2nd ed.)](http://incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto. General reinforcement-learning and Q-learning foundations.
+- [Playing Atari with Deep Reinforcement Learning](https://arxiv.org/abs/1312.5602) — Volodymyr Mnih et al. Deep Q-Networks, experience replay, and target-network stabilization.
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville. Forward propagation, backpropagation, and gradient-based optimization.
+
+## Acknowledgments
+
+* **Prof. Eiji Mizutani** ([NTUST - National Taiwan University of Science and Technology](https://www.ntust.edu.tw/)): Special thanks for his foundational Neural Networks course. The course's treatment of forward propagation, backpropagation, and gradient descent provided the theoretical foundation for implementing the custom neural-network engine used in this project.

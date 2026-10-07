@@ -105,6 +105,10 @@ agent behaviors and failure modes emerged:
 Training was conducted over **3,000 episodes** with epsilon decayed to
 $\varepsilon = 0.05$:
 
+The results below were obtained with the
+[`model_V1.bin`](../../checkpoints/model_V1.bin) checkpoint, which is the
+current V1 model used for evaluation.
+
 These values are empirical observations, not guaranteed performance targets.
 They depend on the model checkpoint, random seeds, map generation, simulator
 timing, and evaluation protocol. Record those details for future comparisons.
