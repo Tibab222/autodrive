@@ -77,7 +77,7 @@ $$
 Y =
 \begin{cases}
 r & \text{if } \text{done} \\
-\operatorname{clamp}\left(
+\mathrm{clamp}\left(
 r + \gamma \max_{a'} Q_{\text{target}}(s',a'),
 -Q_{\max}, Q_{\max}
 \right) & \text{otherwise}
