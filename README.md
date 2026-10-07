@@ -68,7 +68,6 @@ The agent controls the car automatically. The keyboard controls in `controls.rs`
 
 - **Model architecture** — See [Model Architecture](docs/MODEL_ARCHITECTURE.md) for the MLP topology, state encoding, action-value outputs, and model serialization format.
 - **Training architecture** — See [DQN Training Architecture](docs/training.md) for experience replay, Bellman targets, target-network synchronization, exploration, and optimization details.
-- **Reward analysis (V1)** — See [Reward Analysis V1](docs/algorithms/REWARD_ANALYSIS_V1.md) for the current reward calculation, baseline constants, and empirical observations. Future reward changes will be documented in a new version.
 - **Environment** — Bevy entities represent the car, walls, sensors, and parking goal. Each episode uses a randomized map and goal.
 - **Observation** — Six normalized lidar distances, normalized speed, normalized distance to the goal, and normalized relative angle form a 9-value state vector.
 - **Policy** — The MLP maps the state to five Q-values corresponding to discrete car actions.
@@ -80,6 +79,10 @@ Reward calculation and reward-shaping experiments will be documented separately 
 ## Results
 
 The project currently provides the simulation and live episode metrics, including episode count, success rate, crashes, and average steps. Add benchmark values here once they are measured with a fixed model, number of episodes, and map-generation conditions.
+
+The current reward baseline and its empirical observations are documented in
+[Reward Analysis V1](docs/algorithms/REWARD_ANALYSIS_V1.md). Future reward
+calculation changes will be documented in a new versioned analysis document.
 
 ## Tech stack
 
