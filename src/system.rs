@@ -2,12 +2,13 @@ use bevy::prelude::*;
 
 use crate::{
     agent::{
+        Agent, AgentMode, CarAction, Transition,
         agent_car::{AgentCar, TIMEOUT_PENALTY},
-        encode_state, Agent, AgentMode, CarAction, Transition,
+        encode_state,
     },
     components::{Car, GoalMarker, ParkingGoal, Sensor, Wall},
     controls::step_car_physics,
-    map::{random_valid_goal, spawn_random_map, MapLayout},
+    map::{MapLayout, random_valid_goal, spawn_random_map},
 };
 
 const SUCCESS_RATE_WINDOW: usize = 50;
@@ -32,6 +33,14 @@ pub fn agent_loop_system(
         return;
     };
 
+    if agent_car.has_no_reward_map() {
+        agent_car.begin_episode(
+            goal.position,
+            &layout.walls,
+            transform.translation.truncate(),
+        );
+    }
+
     if agent.mode == AgentMode::Inference && keyboard.just_pressed(KeyCode::Space) {
         record_manual_reset(&mut agent);
         randomize_episode(
@@ -47,7 +56,8 @@ pub fn agent_loop_system(
             &mut car,
             &mut transform,
             &mut agent_car,
-            goal.position.length(),
+            goal.position,
+            &layout.walls,
         );
         return;
     }
@@ -57,7 +67,8 @@ pub fn agent_loop_system(
     agent_car.update_parking_status(current_dist, car.speed);
 
     if let Some(prev_state) = agent_car.last_state.clone() {
-        let (mut reward, mut done) = agent_car.compute_reward(current_dist);
+        let (mut reward, mut done) =
+            agent_car.compute_reward(current_dist, transform.translation.truncate());
         let mut timed_out = false;
 
         agent.episode_steps += 1;
@@ -165,7 +176,8 @@ pub fn agent_loop_system(
                 &mut car,
                 &mut transform,
                 &mut agent_car,
-                goal.position.length(),
+                goal.position,
+                &layout.walls,
             );
             return;
         }
@@ -268,15 +280,12 @@ fn reset_car_position(
     car: &mut Car,
     transform: &mut Transform,
     agent_car: &mut AgentCar,
-    current_dist: f32,
+    goal: Vec2,
+    walls: &[(Vec2, Vec2)],
 ) {
     car.speed = 0.0;
     transform.translation = Vec3::new(0.0, 0.0, 0.0);
     transform.rotation = Quat::from_rotation_z(0.0);
 
-    agent_car.is_crashed = false;
-    agent_car.is_parked = false;
-    agent_car.last_state = None;
-    agent_car.last_action = 0;
-    agent_car.last_distance_to_target = current_dist;
+    agent_car.begin_episode(goal, walls, Vec2::ZERO);
 }
